@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fetch Data and Generate CSV</title>
+</head>
+<body>
+    <h1>Fetch Data and Generate CSV</h1>
+    <button id="fetchDataBtn">Fetch Data and Generate CSV</button>
+
+    <script>
+        document.getElementById('fetchDataBtn').addEventListener('click', fetchDataAndGenerateCSV);
+
+        async function fetchDataAndGenerateCSV() {
+            try {
+                const response = await fetch('http://192.168.101.238:8080/show');
+                const text = await response.text();
+
+                // 假設接收到的資料格式為多行: 
+                // "power=1937.9 ,dt:2024-06-05 15:44:27\npower=2000.1 ,dt:2024-06-05 15:45:27\n..."
+                const data = parseData(text);
+
+                const csvContent = convertToCSV(data);
+
+                downloadCSV(csvContent, 'data.csv');
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            }
+        }
+
+        function parseData(data) {
+            const lines = data.trim().split('\n');
+            const parsedData = lines.map(line => {
+                const powerMatch = line.match(/power=([\d.]+)/);
+                const dateMatch = line.match(/dt:([\d-]+ [\d:]+)/);
+
+                if (powerMatch && dateMatch) {
+                    return {
+                        power: powerMatch[1],
+                        datetime: dateMatch[1]
+                    };
+                } else {
+                    throw new Error('Invalid data format');
+                }
+            });
+
+            return parsedData;
+        }
+
+        function convertToCSV(dataArray) {
+            const headers = ['DateTime', 'Power'];
+            const rows = dataArray.map(data => [data.datetime, data.power]);
+
+            let csvContent = headers.join(',') + '\n';
+
+            rows.forEach(row => {
+                csvContent += row.join(',') + '\n';
+            });
+
+            return csvContent;
+        }
+
+        function downloadCSV(csvContent, filename) {
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+
+            if (link.download !== undefined) { // feature detection
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', filename);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        }
+    </script>
+</body>
+</html>
