@@ -1,0 +1,57 @@
+services:
+  web:
+    image: nginx
+    volumes:
+      - ./nginx/nginx.conf:/tmp/nginx.conf
+    environment: 
+      - FLASK_SERVER_ADDR=backend:9091  
+    command: /bin/bash -c "envsubst < /tmp/nginx.conf > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'" 
+    ports:
+      - 80:80
+    depends_on:
+      - backend
+
+  backend:
+    build:
+      context: flask
+      target: builder
+    # flask requires SIGINT to stop gracefully
+    # (default stop signal from Compose is SIGTERM)
+    stop_signal: SIGINT
+    environment:
+      - FLASK_SERVER_PORT=9091
+    volumes:
+      - ./flask:/src
+    depends_on:
+      -  mongo  
+
+  mongo:
+    image: mongo
+    volumes:
+       - ./mongo/db:/data/db
+       - ./mongo/mongod.conf:/etc/mongod.conf
+ 
+  mqtt-sub:
+    build:
+      context: mqtt-sub
+      dockerfile: Dockerfile
+    volumes:
+      - ./mqtt-sub/app:/mqtt-sub/app
+    restart: always
+    #command: /usr/local/bin/python "./app/sub-pzem-004t.py"
+    #ports:
+    #  - 1883:1883
+    #command: "chmod" "+x" "./app/run.sh"
+    #command: ./app/run.sh
+    #command: "python ./app/hello.py"
+    #command: "python ./app/sub-pzem-004t.py"
+    command: "python ./app/sub-1.py"
+    #command: "python ./app/hello.py"
+    depends_on:
+      - mongo
+#    networks:
+#      - app-network
+
+networks:
+ app-network:
+   driver: bridge

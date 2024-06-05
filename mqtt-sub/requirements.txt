@@ -1,0 +1,6 @@
+paho-mqtt
+datetime
+websocket
+requests
+pymongo
+
